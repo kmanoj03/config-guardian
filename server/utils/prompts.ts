@@ -65,3 +65,64 @@ Rules:
 MODEL OUTPUT TO FIX:
 ${bad}
 `;
+
+export const AUTOFIX_PROMPT = (
+  fileType: string,
+  original: string,
+  findingsJson: string
+) => `
+System: You generate a MINIMAL, production-safe patch for the given ${fileType}.
+
+Objectives:
+- Apply fixes that directly address the provided findings ONLY.
+- Keep edits as small as possible (prefer editing existing lines over large rewrites).
+- Only introduce multi-stage builds if a finding explicitly calls for it.
+- Preserve behavior unless a change is necessary for security.
+
+HARD CONSTRAINTS (do not violate):
+- Do NOT add OS packages (no apt-get/apk/yum) unless a finding explicitly requires it.
+- Do NOT add labels/metadata unless a finding explicitly requires it.
+- Do NOT introduce new tools solely to implement HEALTHCHECK. Prefer existing shell or a Node one-liner.
+- Output the FULL, FINAL FILE CONTENT as **plain text only** (no JSON, no code fences, no quotes, no escaped newlines).
+
+Input file (verbatim):
+${original}
+
+Findings (JSON):
+${findingsJson}
+`;
+
+export const AUTOFIX_PROMPT_MINIMAL_RETRY = (
+  fileType: string,
+  original: string,
+  findingsJson: string
+) => `
+System: The previous attempt added unrelated packages/labels. Re-generate a stricter minimal patch for ${fileType}.
+
+You MUST:
+- Remove any lines that install packages (apt-get/apk/yum) or add labels, unless explicitly required by the findings.
+- Keep changes limited to those strictly necessary to address the findings.
+- Use a Node one-liner for HEALTHCHECK if needed (no package installs).
+- Output ONLY the final file as plain text (no JSON/fences/quotes).
+
+Original file:
+${original}
+
+Findings (JSON):
+${findingsJson}
+`;
+
+export const AUTOFIX_REPAIR_TO_PLAINTEXT = (original: string, bad: string) => `
+System: Convert the following structured patch output into the final file content.
+
+Rules:
+- Apply the described operations to the ORIGINAL FILE.
+- Return ONLY the resulting file as plain text.
+- Do NOT include JSON, code fences, quotes, or explanations.
+
+ORIGINAL FILE:
+${original}
+
+STRUCTURED PATCH OUTPUT:
+${bad}
+`;

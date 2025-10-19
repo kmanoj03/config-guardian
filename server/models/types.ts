@@ -15,6 +15,9 @@ export interface AgentTask {
     | "REPORTED"
     | "DONE";
   input: { text?: string; imageBase64?: string };
+  findings?: import("./findings.js").Finding[];
+  summary?: string;
+  patchDiff?: string;
   createdAt: string;
   updatedAt: string;
 }

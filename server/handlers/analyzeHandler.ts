@@ -70,7 +70,13 @@ export async function analyzeTask(id: string) {
     });
 
     const summary = safe.data.summary || "LLM-only findings.";
-    Storage.update(task.id, { state: "PLANNED" as const });
+    Storage.update(task.id, {
+      state: "PLANNED" as const,
+      findings,
+      summary,
+    });
+    return { status: 200, summary, findings } as const;
+
     return { status: 200, summary, findings } as const;
   } catch (e: any) {
     return {
