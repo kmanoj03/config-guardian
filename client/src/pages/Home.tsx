@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Shield, FileText, Image, Play } from 'lucide-react';
+import { Shield, FileText, Image, Play, Link } from 'lucide-react';
 import { Tabs } from '../components/Tabs';
 import { ImageDropzone } from '../components/ImageDropzone';
 import { useAppStore } from '../lib/store';
@@ -161,7 +161,7 @@ export function Home() {
             Supports both text input and image uploads.
           </p>
           
-          <div className="flex justify-center gap-4 text-sm text-muted-foreground">
+          <div className="flex justify-center gap-4 text-sm text-muted-foreground mb-8">
             <div className="flex items-center gap-2">
               <FileText className="h-4 w-4" />
               Text Analysis
@@ -170,6 +170,17 @@ export function Home() {
               <Image className="h-4 w-4" />
               Image Analysis
             </div>
+          </div>
+          
+          {/* Provenance Link */}
+          <div className="flex justify-center">
+            <button
+              onClick={() => navigate('/provenance')}
+              className="flex items-center gap-2 px-4 py-2 text-sm bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/90 transition-colors"
+            >
+              <Link className="h-4 w-4" />
+              Provenance
+            </button>
           </div>
         </div>
       </div>

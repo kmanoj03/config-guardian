@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { RouterProvider } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import { router } from './routes';
 import { TopNav } from '../components/TopNav';
 import { ToastContainer } from '../components/ToastContainer';
@@ -39,6 +40,17 @@ export function App() {
         <RouterProvider router={router} />
       </main>
       <ToastContainer />
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: 'var(--background)',
+            color: 'var(--foreground)',
+            border: '1px solid var(--border)',
+          },
+        }}
+      />
     </div>
   );
 }

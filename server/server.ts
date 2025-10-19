@@ -5,6 +5,7 @@ import { taskRouter } from "routes/tasks.js";
 import { analyzeRouter } from "./routes/analyze.js";
 import { autofixRouter } from "./routes/autoFix.js";
 import { reportRouter } from "./routes/report.js";
+import { provenanceRouter } from "./routes/provenance.js";
 
 const app = express();
 app.use(cors({ origin: (process.env.ALLOWED_ORIGINS || "*").split(",") }));
@@ -14,6 +15,7 @@ app.use("/api/task", taskRouter);
 app.use("/api/analyze", analyzeRouter);
 app.use("/api/autofix", autofixRouter);
 app.use("/api/report", reportRouter);
+app.use("/api/provenance", provenanceRouter);
 
 app.get("/healthz", (_req, res) => res.json({ ok: true }));
 
