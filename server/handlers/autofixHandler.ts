@@ -196,7 +196,7 @@ export async function autofixTask(id: string) {
       patchedText: patched,
     });
 
-    return { status: 200, diff } as const;
+    return { status: 200, diff, patchedText: patched } as const;
   } catch (e: any) {
     return {
       status: 500,

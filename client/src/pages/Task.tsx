@@ -116,13 +116,23 @@ export function TaskPage() {
     try {
       setIsAutofixing(true);
       setLoading(true);
-      const diffResult = await api.autofixTask(task.id);
-      setDiff(diffResult);
+      const autofixResult = await api.autofixTask(task.id);
+      setDiff(autofixResult.diff);
       setShowDiffDrawer(true);
       
       // Update task state to PATCHED after successful autofix
-      setTask(prev => prev ? { ...prev, state: 'PATCHED', patchDiff: diffResult } : null);
-      setCurrentTask({ ...task, state: 'PATCHED', patchDiff: diffResult });
+      setTask(prev => prev ? { 
+        ...prev, 
+        state: 'PATCHED', 
+        patchDiff: autofixResult.diff,
+        patchedText: autofixResult.patchedText
+      } : null);
+      setCurrentTask({ 
+        ...task, 
+        state: 'PATCHED', 
+        patchDiff: autofixResult.diff,
+        patchedText: autofixResult.patchedText
+      });
       
       addToast({
         title: 'Autofix generated',
@@ -320,6 +330,7 @@ export function TaskPage() {
       <DiffDrawer
         diff={diff || task.patchDiff || ''}
         originalContent={task.input.text || ''}
+        patchedContent={task.patchedText || ''}
         isOpen={showDiffDrawer}
         onClose={() => setShowDiffDrawer(false)}
       />

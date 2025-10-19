@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { X, Copy, Download, Check } from 'lucide-react';
+import { X, Copy, Download, Check, Eye, EyeOff } from 'lucide-react';
 import { cn } from '../lib/utils';
-import { copyToClipboard, downloadFile, reconstructPatchedFileFromDiff } from '../lib/utils';
+import { copyToClipboard, downloadFile } from '../lib/utils';
+import ReactDiffViewer from 'react-diff-viewer-continued';
 
 interface DiffDrawerProps {
   diff: string;
   originalContent?: string;
+  patchedContent?: string;
   isOpen: boolean;
   onClose: () => void;
   className?: string;
@@ -14,24 +16,34 @@ interface DiffDrawerProps {
 export function DiffDrawer({ 
   diff, 
   originalContent, 
+  patchedContent,
   isOpen, 
   onClose, 
   className 
 }: DiffDrawerProps) {
   const [copied, setCopied] = useState(false);
+  const [showUnified, setShowUnified] = useState(false);
 
   if (!isOpen) return null;
 
   const handleCopyPatched = async () => {
-    const patchedContent = reconstructPatchedFileFromDiff(diff, originalContent);
-    await copyToClipboard(patchedContent);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    if (patchedContent) {
+      await copyToClipboard(patchedContent);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   const handleDownloadPatched = () => {
-    const patchedContent = reconstructPatchedFileFromDiff(diff, originalContent);
-    downloadFile(patchedContent, 'patched-file.txt', 'text/plain');
+    if (patchedContent) {
+      downloadFile(patchedContent, 'patched-file.txt', 'text/plain');
+    }
+  };
+
+  const handleDownloadOriginal = () => {
+    if (originalContent) {
+      downloadFile(originalContent, 'original-file.txt', 'text/plain');
+    }
   };
 
   return (
@@ -63,7 +75,7 @@ export function DiffDrawer({
         <div className="flex-1 overflow-hidden flex flex-col">
           {/* Actions */}
           <div className="p-4 border-b border-border">
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <button
                 onClick={handleCopyPatched}
                 className="flex items-center gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
@@ -76,16 +88,65 @@ export function DiffDrawer({
                 className="flex items-center gap-2 px-3 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/90 transition-colors"
               >
                 <Download className="h-4 w-4" />
-                Download Patched File
+                Download Patched
+              </button>
+              <button
+                onClick={handleDownloadOriginal}
+                className="flex items-center gap-2 px-3 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/90 transition-colors"
+              >
+                <Download className="h-4 w-4" />
+                Download Original
+              </button>
+              <button
+                onClick={() => setShowUnified(!showUnified)}
+                className="flex items-center gap-2 px-3 py-2 bg-muted text-muted-foreground rounded-lg hover:bg-muted/80 transition-colors"
+              >
+                {showUnified ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                {showUnified ? 'Hide Unified' : 'Show Unified'}
               </button>
             </div>
           </div>
           
           {/* Diff Viewer */}
-          <div className="flex-1 overflow-auto p-4">
-            <pre className="text-sm font-mono whitespace-pre-wrap">
-              {diff}
-            </pre>
+          <div className="flex-1 overflow-auto">
+            {showUnified ? (
+              <div className="p-4">
+                <pre className="text-sm font-mono whitespace-pre-wrap bg-muted p-4 rounded-lg">
+                  {diff}
+                </pre>
+              </div>
+            ) : (
+              <ReactDiffViewer
+                oldValue={originalContent || ''}
+                newValue={patchedContent || ''}
+                splitView={true}
+                showDiffOnly={false}
+                useDarkTheme={false}
+                leftTitle="Original"
+                rightTitle="Patched"
+                styles={{
+                  diffContainer: {
+                    fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace',
+                    fontSize: '14px',
+                  },
+                  diffRemoved: {
+                    backgroundColor: '#fee2e2',
+                    color: '#dc2626',
+                  },
+                  diffAdded: {
+                    backgroundColor: '#dcfce7',
+                    color: '#16a34a',
+                  },
+                  lineNumber: {
+                    color: '#6b7280',
+                  },
+                  gutter: {
+                    backgroundColor: '#f9fafb',
+                    borderRight: '1px solid #e5e7eb',
+                  },
+                }}
+              />
+            )}
           </div>
         </div>
         

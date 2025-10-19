@@ -38,6 +38,7 @@ export const TaskSchema = z.object({
   findings: z.array(FindingSchema).optional(),
   summary: z.string().optional(),
   patchDiff: z.string().optional(),
+  patchedText: z.string().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
@@ -55,6 +56,7 @@ export const AnalyzeResponseSchema = z.object({
 
 export const AutofixResponseSchema = z.object({
   diff: z.string(),
+  patchedText: z.string(),
 });
 
 export const ReportResponseSchema = z.object({

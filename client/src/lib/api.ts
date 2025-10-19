@@ -79,13 +79,13 @@ export const api = {
   },
 
   // Autofix task
-  async autofixTask(taskId: string): Promise<string> {
+  async autofixTask(taskId: string): Promise<{ diff: string; patchedText: string }> {
     const response = await fetch(`${API_BASE_URL}/api/autofix/${taskId}`, {
       method: 'POST',
     });
 
-    const data = await handleResponse<{ diff: string }>(response);
-    return data.diff;
+    const data = await handleResponse<{ diff: string; patchedText: string }>(response);
+    return data;
   },
 
   // Generate report
