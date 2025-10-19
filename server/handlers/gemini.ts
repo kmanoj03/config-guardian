@@ -42,6 +42,21 @@ export async function geminiVisionToText(
   imageBase64: string,
   mimeType = "image/png"
 ) {
+  // Handle data URLs by extracting the base64 data and mime type
+  let base64Data = imageBase64;
+  let detectedMimeType = mimeType;
+  
+  if (imageBase64.startsWith('data:')) {
+    const [header, data] = imageBase64.split(',');
+    base64Data = data;
+    
+    // Extract mime type from data URL header
+    const mimeMatch = header.match(/data:([^;]+)/);
+    if (mimeMatch) {
+      detectedMimeType = mimeMatch[1];
+    }
+  }
+
   const model = genAI.getGenerativeModel({
     model: MODEL_OCR,
     generationConfig: { temperature: 0.1 },
@@ -49,7 +64,7 @@ export async function geminiVisionToText(
   const res = await withTimeout(
     model.generateContent([
       { text: instruction },
-      { inlineData: { mimeType, data: imageBase64 } },
+      { inlineData: { mimeType: detectedMimeType, data: base64Data } },
     ])
   );
   return res.response.text();

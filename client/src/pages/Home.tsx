@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Shield, FileText, Image, Play } from 'lucide-react';
 import { Tabs } from '../components/Tabs';
@@ -18,6 +18,11 @@ export function Home() {
   const [imageBase64, setImageBase64] = useState('');
   const [fileType, setFileType] = useState<FileType>('dockerfile');
 
+  // Reset loading state when component mounts (e.g., when returning from task page)
+  useEffect(() => {
+    setLoading(false);
+  }, [setLoading]);
+
   const handleAnalyze = async () => {
     if (!content.trim() && !imageBase64) {
       addToast({
@@ -30,12 +35,28 @@ export function Home() {
 
     try {
       setLoading(true);
-      const taskId = await api.createTask(content, fileType, imageBase64 || undefined);
+      
+      // Show immediate feedback that analysis has started
       addToast({
         title: 'Analysis started',
-        description: 'Your configuration is being analyzed.',
+        description: 'Your configuration is being analyzed...',
+        type: 'info',
+      });
+      
+      // Step 1: Create the task
+      const taskId = await api.createTask(content, fileType, imageBase64 || undefined);
+      
+      // Step 2: Immediately analyze the task
+      const findings = await api.analyzeTask(taskId);
+      
+      // Step 3: Show success toast with results
+      addToast({
+        title: 'Analysis completed',
+        description: `Found ${findings.length} security issues in your ${fileType} configuration.`,
         type: 'success',
       });
+      
+      // Step 4: Navigate to the task page (which will already be analyzed)
       navigate(`/task/${taskId}`);
     } catch (error) {
       addToast({

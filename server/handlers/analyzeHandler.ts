@@ -22,11 +22,13 @@ export async function analyzeTask(id: string) {
     let rawText = task.input.text;
     if (!rawText && task.input.imageBase64) {
       const ocr = await geminiVisionToText(
-        "Extract the literal text content of this configuration file or terminal output.",
+        "Extract the literal text content of this configuration file or terminal output. Return only the raw text without any markdown formatting or code blocks.",
         task.input.imageBase64
       );
-      rawText = ocr;
-      task.input.text = ocr;
+      // Strip markdown code blocks if present
+      const cleanText = ocr.replace(/^```[\s\S]*?\n([\s\S]*?)\n```$/gm, '$1').trim();
+      rawText = cleanText;
+      task.input.text = cleanText;
       Storage.update(task.id, { input: task.input });
     }
     if (!rawText) return { status: 400, error: "no input text" } as const;

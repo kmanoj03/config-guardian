@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Play, Wrench, FileText, Clock, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Wrench, FileText, Clock, CheckCircle } from 'lucide-react';
 import { CodeViewer } from '../components/CodeViewer';
 import { FindingCard } from '../components/FindingCard';
 import { DiffDrawer } from '../components/DiffDrawer';
@@ -25,6 +25,7 @@ export function TaskPage() {
   const [isAutofixing, setIsAutofixing] = useState(false);
   const [diff, setDiff] = useState<string>('');
   const [showDiffDrawer, setShowDiffDrawer] = useState(false);
+  const [hasAutoAnalyzed, setHasAutoAnalyzed] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -34,6 +35,7 @@ export function TaskPage() {
         const taskData = await api.getTask(id);
         setTask(taskData);
         setCurrentTask(taskData);
+        setHasAutoAnalyzed(false); // Reset for new task
       } catch (error) {
         addToast({
           title: 'Failed to load task',
@@ -47,23 +49,24 @@ export function TaskPage() {
     fetchTask();
   }, [id, navigate, addToast, setCurrentTask]);
 
+  // Note: Auto-analysis is no longer needed since the home page handles complete analysis
+  // This useEffect is kept for edge cases where users directly navigate to an INGESTED task
   useEffect(() => {
-    if (!task || task.state !== 'INGESTED') return;
+    if (!task || task.state !== 'INGESTED' || hasAutoAnalyzed) return;
 
-    // Auto-trigger analysis for INGESTED tasks
+    // Only auto-analyze if user directly navigated to an INGESTED task (edge case)
     const autoAnalyze = async () => {
       try {
         setIsAnalyzing(true);
         setLoading(true);
         const findings = await api.analyzeTask(task.id);
-        setTask(prev => prev ? { ...prev, findings, state: 'ANALYZED' } : null);
-        setCurrentTask({ ...task, findings, state: 'ANALYZED' });
+        // Fetch updated task data to get OCR text
+        const updatedTask = await api.getTask(task.id);
+        setTask(updatedTask);
+        setCurrentTask(updatedTask);
+        setHasAutoAnalyzed(true);
         
-        addToast({
-          title: 'Analysis completed',
-          description: `Found ${findings.length} security issues.`,
-          type: 'success',
-        });
+        // Silent auto-analysis for edge cases
       } catch (error) {
         addToast({
           title: 'Analysis failed',
@@ -77,38 +80,8 @@ export function TaskPage() {
     };
 
     autoAnalyze();
-  }, [task, addToast, setCurrentTask]);
+  }, [task, addToast, setCurrentTask, setLoading, hasAutoAnalyzed]);
 
-  const handleAnalyze = async () => {
-    if (!task) return;
-
-    try {
-      setIsAnalyzing(true);
-      setLoading(true);
-      const findings = await api.analyzeTask(task.id);
-      setTask(prev => prev ? { ...prev, findings, state: 'ANALYZED' } : null);
-      setCurrentTask({ ...task, findings, state: 'ANALYZED' });
-      
-      addToast({
-        title: 'Analysis completed',
-        description: `Found ${findings.length} security issues.`,
-        type: 'success',
-      });
-    } catch (error) {
-      addToast({
-        title: 'Analysis failed',
-        description: error instanceof Error ? error.message : 'An unexpected error occurred.',
-        type: 'error',
-        action: {
-          label: 'Retry',
-          onClick: handleAnalyze,
-        },
-      });
-    } finally {
-      setIsAnalyzing(false);
-      setLoading(false);
-    }
-  };
 
   const handleAutofix = async () => {
     if (!task) return;
@@ -238,15 +211,6 @@ export function TaskPage() {
             </div>
             
             <div className="flex gap-2">
-              <button
-                onClick={handleAnalyze}
-                disabled={isAnalyzing || task.state === 'INGESTED' || task.state === 'ANALYZED'}
-                className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {isAnalyzing ? <Spinner size="sm" /> : <Play className="h-4 w-4" />}
-                Analyze
-              </button>
-              
               {task.findings && task.findings.length > 0 && task.state !== 'PATCHED' && (
                 <button
                   onClick={handleAutofix}
