@@ -3,6 +3,7 @@ import { X, Copy, Download, Check, Eye, EyeOff } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { copyToClipboard, downloadFile } from '../lib/utils';
 import ReactDiffViewer from 'react-diff-viewer-continued';
+import { useTheme } from '../lib/store';
 
 interface DiffDrawerProps {
   diff: string;
@@ -23,6 +24,7 @@ export function DiffDrawer({
 }: DiffDrawerProps) {
   const [copied, setCopied] = useState(false);
   const [showUnified, setShowUnified] = useState(false);
+  const { isDarkMode } = useTheme();
 
   if (!isOpen) return null;
 
@@ -111,7 +113,7 @@ export function DiffDrawer({
           <div className="flex-1 overflow-auto">
             {showUnified ? (
               <div className="p-4">
-                <pre className="text-sm font-mono whitespace-pre-wrap bg-muted p-4 rounded-lg">
+                <pre className="text-sm font-mono whitespace-pre-wrap bg-muted p-4 rounded-lg dark:bg-gray-800 dark:text-gray-200">
                   {diff}
                 </pre>
               </div>
@@ -121,7 +123,7 @@ export function DiffDrawer({
                 newValue={patchedContent || ''}
                 splitView={true}
                 showDiffOnly={false}
-                useDarkTheme={false}
+                useDarkTheme={isDarkMode}
                 leftTitle="Original"
                 rightTitle="Patched"
                 styles={{
@@ -129,21 +131,45 @@ export function DiffDrawer({
                     fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace',
                     fontSize: '14px',
                   },
-                  diffRemoved: {
-                    backgroundColor: '#fee2e2',
-                    color: '#dc2626',
-                  },
-                  diffAdded: {
-                    backgroundColor: '#dcfce7',
-                    color: '#16a34a',
-                  },
-                  lineNumber: {
-                    color: '#6b7280',
-                  },
-                  gutter: {
-                    backgroundColor: '#f9fafb',
-                    borderRight: '1px solid #e5e7eb',
-                  },
+                  ...(isDarkMode ? {
+                    // Dark mode styles
+                    diffRemoved: {
+                      backgroundColor: '#7f1d1d',
+                      color: '#fca5a5',
+                    },
+                    diffAdded: {
+                      backgroundColor: '#14532d',
+                      color: '#86efac',
+                    },
+                    lineNumber: {
+                      color: '#9ca3af',
+                    },
+                    gutter: {
+                      backgroundColor: '#1f2937',
+                      borderRight: '1px solid #374151',
+                    },
+                    diffViewerBackground: '#111827',
+                    diffViewerColor: '#e5e7eb',
+                  } : {
+                    // Light mode styles
+                    diffRemoved: {
+                      backgroundColor: '#fee2e2',
+                      color: '#dc2626',
+                    },
+                    diffAdded: {
+                      backgroundColor: '#dcfce7',
+                      color: '#16a34a',
+                    },
+                    lineNumber: {
+                      color: '#6b7280',
+                    },
+                    gutter: {
+                      backgroundColor: '#f9fafb',
+                      borderRight: '1px solid #e5e7eb',
+                    },
+                    diffViewerBackground: '#ffffff',
+                    diffViewerColor: '#1f2937',
+                  }),
                 }}
               />
             )}

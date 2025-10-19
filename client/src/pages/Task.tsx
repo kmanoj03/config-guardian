@@ -21,7 +21,6 @@ export function TaskPage() {
   const setSelectedFinding = useAppStore((state) => state.setSelectedFinding);
   
   const [task, setTask] = useState<Task | null>(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isAutofixing, setIsAutofixing] = useState(false);
   const [diff, setDiff] = useState<string>('');
   const [showDiffDrawer, setShowDiffDrawer] = useState(false);
@@ -57,9 +56,8 @@ export function TaskPage() {
     // Only auto-analyze if user directly navigated to an INGESTED task (edge case)
     const autoAnalyze = async () => {
       try {
-        setIsAnalyzing(true);
         setLoading(true);
-        const findings = await api.analyzeTask(task.id);
+        await api.analyzeTask(task.id);
         // Fetch updated task data to get OCR text
         const updatedTask = await api.getTask(task.id);
         setTask(updatedTask);
@@ -74,7 +72,6 @@ export function TaskPage() {
           type: 'error',
         });
       } finally {
-        setIsAnalyzing(false);
         setLoading(false);
       }
     };

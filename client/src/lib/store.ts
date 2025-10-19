@@ -10,11 +10,13 @@ interface AppState {
   // UI state
   toasts: Toast[];
   isLoading: boolean;
+  isDarkMode: boolean;
   
   // Actions
   setCurrentTask: (task: Task | null) => void;
   setSelectedFinding: (finding: Finding | null) => void;
   setLoading: (loading: boolean) => void;
+  toggleTheme: () => void;
   
   // Toast actions
   addToast: (toast: Omit<Toast, 'id'>) => void;
@@ -31,6 +33,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   selectedFinding: null,
   toasts: [],
   isLoading: false,
+  isDarkMode: false,
 
   // Actions
   setCurrentTask: (task) => set({ currentTask: task }),
@@ -38,6 +41,31 @@ export const useAppStore = create<AppState>((set, get) => ({
   setSelectedFinding: (finding) => set({ selectedFinding: finding }),
   
   setLoading: (loading) => set({ isLoading: loading }),
+  
+  toggleTheme: () => {
+    try {
+      const currentTheme = get().isDarkMode;
+      const newTheme = !currentTheme;
+      
+      set({ isDarkMode: newTheme });
+      
+      // Update the HTML class for Tailwind dark mode
+      if (typeof document !== 'undefined') {
+        if (newTheme) {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      }
+      
+      // Persist theme preference to localStorage
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('theme', newTheme ? 'dark' : 'light');
+      }
+    } catch (error) {
+      console.error('Error in toggleTheme:', error);
+    }
+  },
 
   // Toast actions
   addToast: (toast) => {
@@ -68,6 +96,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     selectedFinding: null,
     toasts: [],
     isLoading: false,
+    isDarkMode: false,
   }),
 }));
 
@@ -76,3 +105,8 @@ export const useCurrentTask = () => useAppStore((state) => state.currentTask);
 export const useSelectedFinding = () => useAppStore((state) => state.selectedFinding);
 export const useToasts = () => useAppStore((state) => state.toasts);
 export const useIsLoading = () => useAppStore((state) => state.isLoading);
+export const useTheme = () => {
+  const isDarkMode = useAppStore((state) => state.isDarkMode);
+  const toggleTheme = useAppStore((state) => state.toggleTheme);
+  return { isDarkMode, toggleTheme };
+};

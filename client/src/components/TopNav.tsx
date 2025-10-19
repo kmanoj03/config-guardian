@@ -1,5 +1,6 @@
 import { Shield } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { ThemeToggle } from './ThemeToggle';
 
 interface TopNavProps {
   className?: string;
@@ -15,6 +16,9 @@ export function TopNav({ className }: TopNavProps) {
             <h1 className="text-xl font-bold">ConfigGuardian</h1>
           </div>
           
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+          </div>
         </div>
       </div>
     </nav>
