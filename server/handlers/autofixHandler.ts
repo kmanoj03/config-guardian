@@ -1,5 +1,3 @@
-// server/handlers/autofixHandler.ts
-
 import { Storage } from "./storage.js";
 import { buildUnifiedDiff } from "../utils/diff.js";
 import {
@@ -80,6 +78,38 @@ function stripDisallowedIfNeeded(
   return { ok: !changed, text: kept.join("\n").trim() };
 }
 
+/**
+ * Normalize Node base images deterministically:
+ *  - First `FROM node:*` → `FROM node:<ver> AS builder`
+ *  - Subsequent `FROM node:*` → `FROM node:<ver>-slim`
+ * Non-Node images are left untouched. Preserves other lines verbatim.
+ */
+function normalizeNodeBaseImages(patched: string): string {
+  const VERSION = process.env.NODE_BASE_VERSION || "22.0.0";
+  const lines = patched.split(/\r?\n/);
+  let fromNodeCount = 0;
+
+  const rewritten = lines.map((line) => {
+    const m = line.match(
+      /^\s*FROM\s+node:([^\s]+)(?:\s+AS\s+([A-Za-z0-9_-]+))?\s*$/i
+    );
+    if (!m) return line; // not a FROM node line
+
+    fromNodeCount += 1;
+    if (fromNodeCount === 1) {
+      // Builder stage
+      return `FROM node:${VERSION} AS builder`;
+    } else {
+      // Runtime stage(s)
+      // Preserve an existing alias if present (rare for runtime, but safe)
+      const alias = m[2] ? ` AS ${m[2]}` : "";
+      return `FROM node:${VERSION}-slim${alias}`;
+    }
+  });
+
+  return rewritten.join("\n");
+}
+
 /* ------------------------------ handler ------------------------------ */
 
 export async function autofixTask(id: string) {
@@ -153,6 +183,9 @@ export async function autofixTask(id: string) {
     } else {
       patched = minimal.text;
     }
+
+    // 4d) Normalize Node base images consistently (env-driven; default 22.0.0)
+    patched = normalizeNodeBaseImages(patched);
 
     // 5) Build unified diff (3-line context)
     const diff = buildUnifiedDiff(task.fileType, original, patched);
