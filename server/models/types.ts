@@ -18,6 +18,7 @@ export interface AgentTask {
   findings?: import("./findings.js").Finding[];
   summary?: string;
   patchDiff?: string;
+  patchedText?: string;
   createdAt: string;
   updatedAt: string;
 }

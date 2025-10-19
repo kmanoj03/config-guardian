@@ -193,6 +193,7 @@ export async function autofixTask(id: string) {
     Storage.update(task.id, {
       state: "PATCHED",
       patchDiff: diff,
+      patchedText: patched,
     });
 
     return { status: 200, diff } as const;
