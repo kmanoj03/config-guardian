@@ -18,14 +18,22 @@ function inferLineRangeFromEvidence(
 ): [number, number] | undefined {
   if (!evidence) return;
   const lines = text.split(/\r?\n/);
-  const ev = norm(evidence).toLowerCase();
 
-  // fast path: exact line contains evidence-ish snippet
-  for (let i = 0; i < lines.length; i++) {
-    const L = norm(lines[i]).toLowerCase();
-    if (L.includes(ev) || ev.includes(L)) {
-      return [i + 1, i + 1];
+  // Absence-of-USER heuristic: pin to CMD/ENTRYPOINT line
+  if (
+    /\babsence of user directive\b/i.test(evidence) ||
+    /no.*\buser\b/i.test(evidence)
+  ) {
+    for (let i = 0; i < lines.length; i++) {
+      if (/^\s*(CMD|ENTRYPOINT)\b/i.test(lines[i])) return [i + 1, i + 1];
     }
+  }
+
+  const norm = (s: string) => s.replace(/\s+/g, " ").trim().toLowerCase();
+  const ev = norm(evidence).replace(/[`'"]/g, ""); // strip quotes/backticks for robust match
+  for (let i = 0; i < lines.length; i++) {
+    const L = norm(lines[i]).replace(/[`'"]/g, "");
+    if (L.includes(ev) || ev.includes(L)) return [i + 1, i + 1];
   }
 }
 
