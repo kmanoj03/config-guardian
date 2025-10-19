@@ -21,6 +21,8 @@ Constraints:
 - Avoid duplicates (normalize by title+evidence).
 - Limit to the top 8 most important findings**.
 - Output strictly valid JSON only.
+- Do not report the same root cause twice. If a single directive (e.g., "COPY . .") has multiple impacts (secrets risk + image bloat), combine them into ONE finding with a combined rationale and recommendation.
+
 
 
 Return ONLY valid JSON with the following structure:

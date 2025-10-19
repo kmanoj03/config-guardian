@@ -1,5 +1,4 @@
-// Since we are using a base rule check + gemini lookup ;
-// The same issue might appear from rules and Gemini with different severities.
+// The same issue might appear twice with different severities.
 // Thus we write this piece of code to get a single clean item with the highest severity and dope explaination.
 
 import type { Finding } from "../models/findings.js";
@@ -12,24 +11,41 @@ const ORDER: Record<Finding["severity"], number> = {
   CRITICAL: 3,
 };
 
-// Normalize strings (collapse whitespace to dodge fake dupes)
 const normTitle = (s?: string) =>
   (s || "").replace(/\s+/g, " ").trim().toLowerCase();
 
 const normEvidence = (s?: string) =>
   (s || "").replace(/\s+/g, " ").trim().toLowerCase();
 
-// A key that keeps distinct instances separate if evidence truly differs
-const key = (x: Finding) => `${normTitle(x.title)}|${normEvidence(x.evidence)}`;
+// Primary: cluster by evidence; Fallback: title|evidence if no usable evidence
+const keyByEvidence = (x: Finding) => {
+  const ev = normEvidence(x.evidence);
+  return ev ? `ev:${ev}` : "";
+};
+const keyByTitleEvidence = (x: Finding) =>
+  `ti:${normTitle(x.title)}|${normEvidence(x.evidence)}`;
 
-// Choose the richer (more informative) text
-const richer = (a?: string, b?: string) => {
+// Prefer more informative/LLM copy even if shorter
+const preferLLM = (aSrc?: string, bSrc?: string) =>
+  aSrc === "llm" ? aSrc : bSrc === "llm" ? bSrc : aSrc;
+const richer = (a?: string, b?: string, aSrc?: string, bSrc?: string) => {
   if (!a) return b;
   if (!b) return a;
+  // prefer LLM phrasing on ties-in-length-ish
+  if (Math.abs(a.length - b.length) <= 12) {
+    const src = preferLLM(aSrc, bSrc);
+    return src === "llm"
+      ? bSrc === "llm"
+        ? b
+        : a
+      : a.length >= b.length
+      ? a
+      : b;
+  }
   return b.length > a.length ? b : a;
 };
 
-// Pick one lineRange: if only one present, use it; if both, keep the one with smaller span (more precise)
+// Pick the more precise lineRange
 const pickLineRange = (a?: [number, number], b?: [number, number]) => {
   if (a && !b) return a;
   if (b && !a) return b;
@@ -41,73 +57,69 @@ const pickLineRange = (a?: [number, number], b?: [number, number]) => {
   return undefined;
 };
 
-// Merge two findings that represent the same underlying issue
+// Merge two findings representing the same root issue
 function mergeTwo(prev: Finding, cur: Finding): Finding {
-  // 1) severity: higher wins
-  const a = ORDER[prev.severity] >= ORDER[cur.severity] ? prev : cur;
+  const aWins = ORDER[prev.severity] >= ORDER[cur.severity];
+  const winner = aWins ? prev : cur;
+  const other = aWins ? cur : prev;
 
-  // 2) prefer LLM when severities tie (for copy polish), else keep winner `a`
-  const preferLLM =
-    ORDER[prev.severity] === ORDER[cur.severity] &&
-    ((prev.source === "llm" && cur.source !== "llm") ||
-      (cur.source === "llm" && prev.source !== "llm"));
-  const winner = preferLLM ? (prev.source === "llm" ? prev : cur) : a;
+  // prefer LLM copy even when winner is rule (if you ever re-add rules)
+  const title = winner.title; // keep single title for tightness
 
-  // 3) Build merged record, keeping the best of each field
   const merged: Finding = {
     ...winner,
+    title,
     evidence: richer(
       winner.evidence,
-      winner === prev ? cur.evidence : prev.evidence
+      other.evidence,
+      winner.source,
+      other.source
     )!,
     rationale: richer(
       winner.rationale,
-      winner === prev ? cur.rationale : prev.rationale
+      other.rationale,
+      winner.source,
+      other.source
     )!,
     recommendation: richer(
       winner.recommendation,
-      winner === prev ? cur.recommendation : prev.recommendation
+      other.recommendation,
+      winner.source,
+      other.source
     )!,
     lineRange: pickLineRange(prev.lineRange, cur.lineRange),
-    // Source: if both present and tie, prefer LLM; otherwise keep winner’s or whichever exists
-    source:
-      prev.source && cur.source
-        ? preferLLM
-          ? "llm"
-          : winner.source
-        : winner.source || prev.source || cur.source,
+    source: winner.source || other.source,
+    autofixHint: winner.autofixHint || other.autofixHint,
   };
-
-  // Keep an autofixHint if any one provides it (prefer winner’s, else the other)
-  merged.autofixHint =
-    merged.autofixHint ||
-    (winner === prev ? cur.autofixHint : prev.autofixHint);
 
   return merged;
 }
 
 /**
- * Merge arrays:
- *  - one finding per issue (keyed by title|evidence)
- *  - higher severity wins; prefer LLM on ties
- *  - keep richer text; keep precise lineRange
+ * One finding per root cause:
+ * - Try evidence-cluster; fall back to title|evidence if evidence empty
+ * - Higher severity wins; prefer LLM wording on ties
+ * - Keep precise lineRange; keep best evidence/rationale/reco
  */
 export function mergeFindings(a: Finding[], b: Finding[]): Finding[] {
   const map = new Map<string, Finding>();
 
   for (const src of [...a, ...b]) {
-    const k = key(src);
-    const existing = map.get(k);
+    const kEv = keyByEvidence(src);
+    const kTi = keyByTitleEvidence(src);
+    const key = kEv || kTi;
+
+    const existing = map.get(key);
     if (!existing) {
-      map.set(k, src);
+      map.set(key, src);
     } else {
-      map.set(k, mergeTwo(existing, src));
+      map.set(key, mergeTwo(existing, src));
     }
   }
   return Array.from(map.values());
 }
 
-/** Sort findings by severity (CRITICAL → LOW), then by title */
+/** Sort findings by severity (CRITICAL → LOW), then by normalized title */
 export function sortFindingsDesc(findings: Finding[]): Finding[] {
   return [...findings].sort((x, y) => {
     const sev = ORDER[y.severity] - ORDER[x.severity];

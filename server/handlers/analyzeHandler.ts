@@ -10,7 +10,7 @@ import {
   geminiRepairJson,
 } from "./gemini.js";
 import { FindingsPayloadSchema } from "../models/schemas.js";
-import { mergeFindings, sortFindingsDesc } from "../utils/merge.js";
+import { mergeFindings } from "../utils/merge.js";
 import { parseWithRepair } from "../utils/llmJson.js";
 
 export async function analyzeTask(id: string) {
