@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Shield, Copy, Check, Link, ExternalLink, ArrowLeft } from 'lucide-react';
-import { QRCodeSVG } from 'qrcode.react';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { fetchEnvelope, verifyEnvelope } from './api';
@@ -253,20 +252,6 @@ export default function ProvenancePage() {
               </div>
             </div>
 
-            {/* QR Code */}
-            <div>
-              <label className="block text-sm font-medium text-muted-foreground mb-2">
-                QR Code
-              </label>
-              <div className="flex justify-center p-4 bg-white rounded-lg">
-                <QRCodeSVG
-                  value={envelope.publishHint}
-                  size={200}
-                  level="M"
-                  includeMargin={true}
-                />
-              </div>
-            </div>
 
             {/* Payload Summary */}
             <div>
