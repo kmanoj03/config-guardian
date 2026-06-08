@@ -78,53 +78,6 @@ flowchart LR
     GOCR -->|extracted text| Handlers
 ```
 
-### End-to-end task flow
-
-![End-to-end task flow](./docs/sequence.png)
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor U as User
-    participant FE as Frontend
-    participant BE as Backend
-    participant G as Gemini
-
-    U->>FE: Paste config or upload image
-    FE->>BE: POST /api/task (text | imageBase64, fileType)
-    BE-->>FE: taskId (state: INGESTED)
-
-    FE->>BE: POST /api/analyze/:id
-    alt Image input
-        BE->>G: Vision OCR (gemini-2.5-flash)
-        G-->>BE: Raw text
-    end
-    BE->>G: Audit prompt (gemini-2.5-pro)
-    G-->>BE: JSON findings
-    BE->>BE: Repair JSON &rarr; validate &rarr; dedupe &rarr;<br/>infer line ranges &rarr; sort &rarr; cap (top 8)
-    BE-->>FE: summary + findings (state: PLANNED)
-
-    U->>FE: Click "Autofix"
-    FE->>BE: POST /api/autofix/:id
-    BE->>G: Generate full patched file (plain text)
-    G-->>BE: Patched text
-    BE->>BE: Sanitize, strip disallowed lines,<br/>normalize Node base images, build unified diff
-    BE-->>FE: diff + patchedText (state: PATCHED)
-
-    U->>FE: Click "Generate Report"
-    FE->>BE: POST /api/report/:id
-    BE->>G: Report prompt
-    G-->>BE: Markdown report
-    BE-->>FE: markdown
-
-    U->>FE: Open Provenance
-    FE->>BE: POST /api/provenance/:id
-    BE-->>FE: Envelope (canonical JSON + SHA-256 hash)
-    FE->>BE: POST /api/provenance/verify
-    BE-->>FE: ok / recomputed hash
-```
-
----
 
 ## How it works (in plain English)
 
